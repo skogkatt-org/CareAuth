@@ -1,24 +1,30 @@
 #[macro_use]
 extern crate rocket;
-use std::{env, path::Path};
+use std::{env, format};
 
 use rocket::{
     serde::{json::Json, Deserialize, Serialize},
-    State, Response, response::{Responder, status},
+    State, response::status,
 };
 use sqlx::{
-    migrate::{self, Migration, Migrator},
     postgres::PgPoolOptions,
     Pool, Postgres,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 #[serde(crate = "rocket::serde")]
 struct Role {
     /// The role's ID. Output only. Default value is `unknown_id()`.
     #[serde(default = "unknown_id")]
     id: i32,
     name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Roles {
+    /// The list of roles.
+    roles: Vec<Role>,
 }
 
 fn unknown_id() -> i32 { -1 }
@@ -30,10 +36,12 @@ struct App {
 impl App {
     async fn new() -> Result<App, sqlx::Error> {
         // Connect to the database.
+        let postgres_url = &env::var("POSTGRES_URL").unwrap();
         let pool = PgPoolOptions::new()
             .max_connections(16)
-            .connect(&env::var("POSTGRES_URL").unwrap())
-            .await?;
+            .connect(&postgres_url)
+            .await
+            .expect(format!("connect to database {}", postgres_url).as_str());
 
         // Run migrations.
         sqlx::migrate!("./migrations").run(&pool).await?;
@@ -46,6 +54,15 @@ impl App {
             id: id,
             name: "admin".to_string(),
         }
+    }
+
+    async fn list_roles(&self) -> Result<Roles, sqlx::Error> {
+        let rows: Vec<Role> = sqlx::query_as("SELECT * FROM roles")
+            .fetch_all(&self.pool)
+            .await?;
+        return Ok(Roles {
+            roles: rows,
+        })
     }
 
     async fn create_role(&self, role: Role) -> Result<Role, sqlx::Error> {
@@ -71,6 +88,14 @@ async fn get_role(app: &State<App>, id: i32) -> Json<Role> {
     Json(app.get_role(id))
 }
 
+#[get("/roles")]
+async fn list_roles(app: &State<App>) -> Result<Json<Roles>, status::Unauthorized<String>> {
+    match app.list_roles().await {
+        Ok(roles) => Ok(Json(roles)),
+        Err(err) => Err(status::Unauthorized(Some(err.to_string()))),
+    }
+}
+
 #[post("/roles", format = "json", data = "<role>")]
 async fn create_role(app: &State<App>, role: Json<Role>) -> Result<Json<Role>, status::Unauthorized<String>> {
     match app.create_role(role.into_inner()).await {
@@ -94,12 +119,12 @@ async fn update_role(app: &State<App>, id: i32, role: Json<Role>) -> Json<Role> 
 
 #[launch]
 async fn rocket() -> _ {
-    let app = App::new().await.unwrap();
+    let app = App::new().await.expect("create app");
 
     rocket::build()
         .mount(
             "/api/v1/",
-            routes![get_role, create_role, delete_role, update_role,],
+            routes![get_role, create_role, delete_role, update_role, list_roles],
         )
         .manage(app)
 }

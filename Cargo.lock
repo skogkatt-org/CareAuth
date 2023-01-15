@@ -172,6 +172,7 @@ version = "0.1.0"
 dependencies = [
  "rocket",
  "sqlx",
+ "thiserror",
 ]
 
 [[package]]

@@ -314,14 +314,14 @@ async fn update_role<'a>(app: App, mut req: Request<Body>, param_map: HashMap<St
 }
 
 async fn router(app: App, req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    use router::RouterBuilder;
+    use router::{Builder, Route};
 
-    let router = RouterBuilder::new(app)
-        .register("GET", "/api/v1/roles", list_roles)
-        .register("GET", "/api/v1/roles/<id>", get_role)
-        .register("POST", "/api/v1/roles", create_role)
-        .register("PUT", "/api/v1/roles/<id>", update_role)
-        .register("DELETE", "/api/v1/roles/<id>", delete_role)
+    let router = Builder::new(app)
+        .register(Route::get("/api/v1/roles"), list_roles)
+        .register(Route::get("/api/v1/roles/<id>"), get_role)
+        .register(Route::post("/api/v1/roles"), create_role)
+        .register(Route::put("/api/v1/roles/<id>"), update_role)
+        .register(Route::delete("/api/v1/roles/<id>"), delete_role)
         .build();
 
     router.route(req.method(), &req.uri().path().to_owned());

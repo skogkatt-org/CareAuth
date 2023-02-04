@@ -8,14 +8,16 @@ Running Environment:
 
 Devlopment:
 
-- Rust nightly: This project is write by Rust.
-- sqlx cli: We use sqlx cli to manage the database migration.
+- Node.js: This project is write by TypeScript with pnpm (but we are trying to
+  rewrite it by Rust in the future).
+- dbmate: Which help us to manage database. (Use `./scripts/dbmate.sh` as a
+  helpful wrapper)
 
-## Guide to Test
+## Guide to Run the Server for Testing
 
 ```shell
-# Run the PostgreSQL by Docker.
-$ bash scripts/testing_postgres.sh
-# Run the application by Rust's cargo (and using the test database).
-$ bash scripts/testing_run.sh
+# Prepare the environment to run the server.
+$ bash scripts/prepare.sh
+# Run the server.
+$ bash scripts/run.sh
 ```

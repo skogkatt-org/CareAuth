@@ -10,6 +10,7 @@ Devlopment:
 
 - Node.js: This project is write by TypeScript with pnpm (but we are trying to
   rewrite it by Rust in the future).
+- pnpm: We use pnpm as our package manager.
 - dbmate: Which help us to manage database. (Use `./scripts/dbmate.sh` as a
   helpful wrapper)
 

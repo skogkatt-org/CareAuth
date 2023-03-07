@@ -33,10 +33,10 @@ export class App {
     return res.rows[0];
   }
 
-  async updateRole(role_id: number, role: RoleInput): Promise<Role> {
+  async updateRole(role: Role): Promise<Role> {
     const res: QueryResult<Role> = await client.query(
       "UPDATE roles SET name = $1 WHERE id = $2 RETURNING *",
-      [role.name, role_id]
+      [role.name, role.id]
     );
     return res.rows[0];
   }
@@ -66,10 +66,10 @@ export class App {
     return res.rows[0];
   }
 
-  async updateUser(user_id: number, user: UserInput): Promise<User> {
+  async updateUser(user: User): Promise<User> {
     const res: QueryResult<User> = await client.query(
       "UPDATE users SET name = $1, hashed_password = $2 WHERE id = $3 RETURNING *",
-      [user.name, await hash_password(user.password), user_id]
+      [user.name, await hash_password(user.password), user.id]
     );
     return res.rows[0];
   }
@@ -83,13 +83,13 @@ export class App {
    * @returns The Login object.
    * @throws If the the password is not corrent or something else.
    */
-  async createLogin(login: LoginInput): Promise<Login> {
+  async login(username: string, password: string): Promise<Login> {
     const res: QueryResult<User> = await client.query(
       "SELECT * FROM users WHERE name = $1",
-      [login.username]
+      [username]
     );
     let user = res.rows[0];
-    if (await bcrypt.compare(login.password, user.hashed_password)) {
+    if (await bcrypt.compare(password, user.hashed_password)) {
       const secert = process.env.JWT_SECRET;
       if (secert === undefined) throw new Error("variable JWT_SECRET not found");
       return { token: jwt.sign({ data: user }, secert) };
@@ -97,10 +97,10 @@ export class App {
     throw new Error("invalid password");
   }
 
-  async verifyLogin(login: Login): Promise<VerifiedLogin> {
+  async verify(token: string): Promise<VerifiedLogin> {
     const secert = process.env.JWT_SECRET;
     if (secert === undefined) throw new Error("variable JWT_SECRET not found");
-    return jwt.verify(login.token, secert) as VerifiedLogin
+    return jwt.verify(token, secert) as VerifiedLogin
   }
 };
 
@@ -126,6 +126,7 @@ export interface Roles {
 export interface User {
   id: number;
   name: string;
+  password: string;
   hashed_password: string;
 }
 
